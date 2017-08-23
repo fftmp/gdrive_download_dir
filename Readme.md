@@ -12,6 +12,7 @@ Another ways (via various applications) require authorization.
 # How it works
 Script emulates browser behavior. It downloads list of files in folder (in JSON format), then download each file by file_id.
 To get list of files need to use some magic string - need to investigate, what is it and can this string change or not.
+For downloading big files used idea from [user115202 on stackoverflow](https://stackoverflow.com/a/39225039)
 
 # Usage example
 ./gdrive_download_dir.py 0B0HtNZkqn9bwM0NCRXRmMTdzY1U  
@@ -22,3 +23,4 @@ To get list of files need to use some magic string - need to investigate, what i
 *   check successfull download
 *   add option for download or skip trashed files
 *   add ability to download big (>2Gb) files
+*   check download empty folder hierarchy
