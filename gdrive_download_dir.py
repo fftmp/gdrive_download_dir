@@ -4,11 +4,13 @@ import sys
 import json
 import logging as log
 from os import makedirs
+from multiprocessing.dummy import Pool as ThreadPool
 import requests
 
 GDRIVE_MAGIC_KEY = 'AIzaSyC1qbk75NzWBvSaDh6KnsjjA9pIrP4lYIE'
 GDRIVE_HOST = 'https://clients6.google.com'
 CHUNK_SIZE = 32768
+DOWNLOAD_THREADS = 10
 
 def get_filelist(ses, dir_name, dir_id):
     log.debug('get files from ' + dir_name)
@@ -45,12 +47,6 @@ def get_filelist(ses, dir_name, dir_id):
 
 
 def download_file(file_id, filename):
-    def get_confirm_token(cookies):
-        for key, value in cookies.items():
-            if key.startswith('download_warning'):
-                return value
-        return None
-
     def save_response_content(response, destination):
         with open(destination, "wb+") as _f:
             for chunk in response.iter_content(CHUNK_SIZE):
@@ -60,16 +56,19 @@ def download_file(file_id, filename):
     path = filename.rsplit('/', maxsplit=1)[0]
     log.debug('Download ' + filename + ' from ' + file_id + ' path = ' + path)
     makedirs(path, exist_ok=True)
-    resp = requests.get('https://drive.google.com/uc?export=download',
-                        params={'id': file_id},
-                        stream=True)
+    ses = requests.Session()
+    resp = ses.get('https://drive.google.com/uc?', params={'id': file_id})
     resp.raise_for_status()
-    token = get_confirm_token(resp.cookies)
-    if token:
-        resp = requests.get('https://drive.google.com/uc?export=download',
-                            params={'id': file_id, 'confirm' : token},
-                            stream=True)
-        resp.raise_for_status()
+    for cookie_name in resp.cookies.keys():
+        if cookie_name.startswith('download_warning'):
+            #big file
+            resp = ses.post('https://drive.google.com/uc?', params={'id': file_id})
+            resp.raise_for_status()
+            log.debug('download big file ' + resp.content.decode('utf8'))
+            # in response first line contain garbage. so we cut it
+            _resp_json = json.loads(resp.content.decode('utf8').split('\n', maxsplit=1)[1])
+            download_url = _resp_json['downloadUrl']
+            resp = ses.get(download_url)
     save_response_content(resp, filename)
 
 def main():
@@ -78,6 +77,13 @@ def main():
     ses = requests.Session() #create session for activate keep alive
     files = get_filelist(ses, sys.argv[1], sys.argv[1])
     log.info('Start downloading ' + str(len(files)) + ' files')
+
+    pool = ThreadPool(DOWNLOAD_THREADS)
+    pool.starmap(download_file, files.items())
+
+    #close the pool and wait for the work to finish
+    pool.close()
+    pool.join()
 
     for file_id, filename in files.items():
         download_file(file_id, filename)
