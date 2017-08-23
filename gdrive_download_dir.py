@@ -80,13 +80,9 @@ def main():
 
     pool = ThreadPool(DOWNLOAD_THREADS)
     pool.starmap(download_file, files.items())
-
-    #close the pool and wait for the work to finish
     pool.close()
     pool.join()
 
-    for file_id, filename in files.items():
-        download_file(file_id, filename)
     log.info('Done')
 
 
