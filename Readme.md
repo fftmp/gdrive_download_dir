@@ -21,3 +21,4 @@ To get list of files need to use some magic string - need to investigate, what i
 *   add parallel download
 *   check successfull download
 *   add option for download or skip trashed files
+*   add ability to download big (>2Gb) files
