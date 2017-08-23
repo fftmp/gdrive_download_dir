@@ -10,15 +10,14 @@ See more:
 Another ways (via various applications) require authorization.
 
 # How it works
-Script emulates browser behavior. It downloads list of files in folder (in JSON firmat), then download each file by file_id.
+Script emulates browser behavior. It downloads list of files in folder (in JSON format), then download each file by file_id.
 To get list of files need to use some magic string - need to investigate, what is it and can this string change or not.
 
 # Usage example
-./gdrive_download_dir.py 0B0HtNZkqn9bwM0NCRXRmMTdzY1U
+./gdrive_download_dir.py 0B0HtNZkqn9bwM0NCRXRmMTdzY1U  
 (You can use https://drive.google.com/drive/folders/0B0HtNZkqn9bwM0NCRXRmMTdzY1U for tests)
 
 # TODO
 *   add parallel download
 *   check successfull download
-*   add recursive downloads
 *   add option for download or skip trashed files
