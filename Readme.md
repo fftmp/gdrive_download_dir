@@ -17,6 +17,7 @@ For downloading big files used idea from [user115202 on stackoverflow](https://s
 # Usage example
 ./gdrive_download_dir.py 0B0HtNZkqn9bwM0NCRXRmMTdzY1U  
 (You can use https://drive.google.com/drive/folders/0B0HtNZkqn9bwM0NCRXRmMTdzY1U for tests)
+Currently script creates folder with given folder_id in cwd and place there downloaded content
 
 # TODO
 *   add parallel download
