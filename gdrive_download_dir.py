@@ -24,7 +24,12 @@ def get_filelist(folder_id):
                                                      sys.argv[1]})
         res = json.loads(resp.content.decode('utf8').replace('\'', '"'))
         for item in res['items']:
-            files[item['id']] = item['title']
+            if item['mimeType'] == 'application/vnd.google-apps.folder':
+                nested_files = get_filelist(item['id'])
+                for file_id, filename in nested_files.items():
+                    files[file_id] = item['title'] + '/' + filename
+            else:
+                files[item['id']] = folder_id + '/' + item['title']
         if 'nextPageToken' in res.keys():
             next_page_token = res['nextPageToken']
         else:
