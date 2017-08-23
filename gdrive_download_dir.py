@@ -18,7 +18,8 @@ def get_filelist(folder_id):
               '&key=' + GDRIVE_MAGIC_KEY
         if next_page_token != '':
             url += '&pageToken=' + next_page_token
-        resp = requests.get(url, headers={'referer': sys.argv[1]})
+        resp = requests.get(url, headers={'referer': 'https://drive.google.com/drive/folders/' + \
+                                                     sys.argv[1]})
         res = json.loads(resp.content.decode('utf8').replace('\'', '"'))
         for item in res['items']:
             files[item['id']] = item['title']
@@ -37,9 +38,8 @@ def download_file(file_id, filename):
     file_jpeg.close()
 
 def main():
-    print('Try to download files from ' + sys.argv[1])
-    folder_id = sys.argv[1].rsplit('/', maxsplit=1)[1]
-    files = get_filelist(folder_id)
+    print('Try to download files from folder id = ' + sys.argv[1])
+    files = get_filelist(sys.argv[1])
     print('Start downloading ' + str(len(files)) + ' files')
     exit(0)
 
