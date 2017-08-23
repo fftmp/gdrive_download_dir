@@ -2,6 +2,8 @@
 
 import sys
 import json
+import logging
+from logging import info
 import requests
 
 GDRIVE_MAGIC_KEY = 'AIzaSyC1qbk75NzWBvSaDh6KnsjjA9pIrP4lYIE'
@@ -31,21 +33,22 @@ def get_filelist(folder_id):
 
 
 def download_file(file_id, filename):
-    print('Try to download ' + filename + ' from ' + file_id)
+    info('Try to download ' + filename + ' from ' + file_id)
     resp = requests.get('https://docs.google.com/uc?id=' + file_id)
     file_jpeg = open(filename, 'wb+')
     file_jpeg.write(resp.content)
     file_jpeg.close()
 
 def main():
-    print('Try to download files from folder id = ' + sys.argv[1])
+    logging.basicConfig(level=logging.INFO)
+    info('Try to download files from folder id = ' + sys.argv[1])
     files = get_filelist(sys.argv[1])
-    print('Start downloading ' + str(len(files)) + ' files')
+    info('Start downloading ' + str(len(files)) + ' files')
     exit(0)
 
     for file_id, filename in files.items():
         download_file(file_id, filename)
-    print('Done')
+    info('Done')
 
 
 if __name__ == '__main__':
