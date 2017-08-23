@@ -24,6 +24,4 @@ Currently script creates folder with given folder_id in cwd and place there down
 # TODO
 *   check successfull download
 *   add option for download or skip trashed files
-*   add ability to download big (>2Gb) files
-*   check download empty folder hierarchy
 *   show progress or estimation
