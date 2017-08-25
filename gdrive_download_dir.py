@@ -5,11 +5,11 @@ import json
 import logging as log
 from os import makedirs
 from multiprocessing.dummy import Pool as ThreadPool
+import shutil
 import requests
 
 GDRIVE_MAGIC_KEY = 'AIzaSyC1qbk75NzWBvSaDh6KnsjjA9pIrP4lYIE'
 GDRIVE_HOST = 'https://clients6.google.com'
-CHUNK_SIZE = 32768
 DOWNLOAD_THREADS = 10
 
 def get_dir_tree(ses, dir_name, dir_id):
@@ -23,7 +23,7 @@ def get_dir_tree(ses, dir_name, dir_id):
     url = GDRIVE_HOST + '/drive/v2beta/files?'
     common_params = {'q': '\'' + dir_id + '\' in parents',
                      'fields': 'items(mimeType,title,id),nextPageToken',
-                     'maxResults': '50',
+                     'maxResults': '1000',
                      'key': GDRIVE_MAGIC_KEY}
     headers = {'referer': 'https://drive.google.com/drive/folders/' + sys.argv[1]}
 
@@ -54,12 +54,6 @@ def download_file(_id, name):
     """ Download file and save it to name. Create dirs, if necessary.
         If name end with '/', treat it as a dir name an only create dir.
     """
-    def save_response_content(response, destination):
-        with open(destination, "wb+") as _f:
-            for chunk in response.iter_content(CHUNK_SIZE):
-                if chunk: # filter out keep-alive new chunks
-                    _f.write(chunk)
-
     if name.endswith('/'):
         #this is folder item, not a file
         makedirs(name, exist_ok=True)
@@ -67,19 +61,23 @@ def download_file(_id, name):
     path = name.rsplit('/', maxsplit=1)[0]
     log.debug('Download ' + name + ' from ' + _id + ' path = ' + path)
     makedirs(path, exist_ok=True)
-    ses = requests.Session()
-    resp = ses.get('https://drive.google.com/uc?', params={'id': _id})
+
+    resp = requests.get('https://drive.google.com/uc?', params={'id': _id})
     resp.raise_for_status()
     for cookie_name in resp.cookies.keys():
         if cookie_name.startswith('download_warning'):
+            log.debug('big file ' + name + ' id = ' + _id)
             #big file
-            resp = ses.post('https://drive.google.com/uc?', params={'id': _id})
+            resp = requests.post('https://drive.google.com/uc?', params={'id': _id})
             resp.raise_for_status()
             # in response first line contain garbage. so we cut it
-            _resp_json = json.loads(resp.content.decode('utf8').split('\n', maxsplit=1)[1])
-            download_url = _resp_json['downloadUrl']
-            resp = ses.get(download_url)
-    save_response_content(resp, name)
+            resp = requests.get(json.loads(resp.content.decode('utf8').split('\n', maxsplit=1)[1])
+                                ['downloadUrl'],
+                                stream=True)
+            break
+    with open(name, 'wb') as _f:
+        resp.raw.decode_content = True
+        shutil.copyfileobj(resp.raw, _f)
 
 def main():
     log.basicConfig(level=log.DEBUG)
