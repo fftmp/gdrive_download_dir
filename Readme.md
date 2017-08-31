@@ -22,5 +22,4 @@ but it is not works for now. Workable solution is to POST (important) ordinary u
 Currently script creates folder with given folder_id in cwd and place there downloaded content
 
 # TODO
-*   show progress or estimation
 *   increase downloading speed, if possible

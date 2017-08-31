@@ -99,7 +99,11 @@ def download_dir_recursive(dir_id, dir_name):
     log.info('Prepare list of files')
     ses = requests.Session() #create session for activate keep alive
     tree = get_dir_tree(ses, dir_id, dir_name)
-    log.info('Start downloading files')
+    total_size = 0
+    for _it in tree:
+        if 'size' in _it.keys():
+            total_size += _it['size']
+    log.info('Start downloading files. Total size = ' + str(total_size) + ' bytes')
 
     pool = ThreadPool(DOWNLOAD_THREADS)
     pool.map(download_file, tree)
