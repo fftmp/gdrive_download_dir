@@ -12,12 +12,14 @@ import logging as log
 from os import makedirs
 from os.path import getsize
 from multiprocessing.dummy import Pool as ThreadPool
+from time import sleep
 import shutil
 import requests
 
 GDRIVE_MAGIC_KEY = 'AIzaSyC1qbk75NzWBvSaDh6KnsjjA9pIrP4lYIE'
 GDRIVE_HOST = 'https://clients6.google.com'
 DOWNLOAD_THREADS = 10
+DOWNLOAD_ATTEMPTS = 5
 
 def get_dir_tree(ses, dir_name, dir_id):
     """Return info about files and dirs inside list of dict: [{size : '', name: '', _id: ''}]
@@ -69,21 +71,35 @@ def download_file(item):
     log.debug('Download ' + item['name'] + ' from ' + item['_id'] + ' path = ' + path)
     makedirs(path, exist_ok=True)
 
-    resp = requests.get('https://drive.google.com/uc?', params={'id': item['_id']}, stream=True)
-    resp.raise_for_status()
-    for cookie_name in resp.cookies.keys():
-        if cookie_name.startswith('download_warning'):
-            log.debug('big file ' + item['name'] + ' id = ' + item['_id'])
-            resp = requests.post('https://drive.google.com/uc?', params={'id': item['_id']})
-            resp.raise_for_status()
-            # in response first line contain garbage. so we cut it
-            resp = requests.get(json.loads(resp.content.decode('utf8').split('\n', maxsplit=1)[1])
-                                ['downloadUrl'],
+    for i in range(DOWNLOAD_ATTEMPTS):
+        try:
+            resp = requests.get('https://drive.google.com/uc?', params={'id': item['_id']},
                                 stream=True)
+            resp.raise_for_status()
+            for cookie_name in resp.cookies.keys():
+                if cookie_name.startswith('download_warning'):
+                    log.debug('big file ' + item['name'] + ' id = ' + item['_id'])
+                    resp = requests.post('https://drive.google.com/uc?', params={'id': item['_id']})
+                    resp.raise_for_status()
+                    # in response first line contain garbage. so we cut it
+                    resp = requests.get(json.loads(resp.content.decode('utf8').
+                                                   split('\n', maxsplit=1)[1])
+                                        ['downloadUrl'],
+                                        stream=True)
+                    break
+            with open(item['name'], 'wb') as _f:
+                resp.raw.decode_content = True
+                shutil.copyfileobj(resp.raw, _f)
             break
-    with open(item['name'], 'wb') as _f:
-        resp.raw.decode_content = True
-        shutil.copyfileobj(resp.raw, _f)
+        except requests.exceptions.ConnectionError:
+            if i < DOWNLOAD_ATTEMPTS - 1:
+                log.warning('ConnectionError during download file ' + item['name'] +
+                            ' with id = ' + item['_id'] + '. Retrying.')
+                sleep(2)
+            else:
+                log.error('Couldn\'t download file ' + item['name'] +
+                          ' with id = ' + item['_id'] + '. Skipping.')
+                return
 
     real_size = getsize(item['name'])
     if  real_size != item['size']:
