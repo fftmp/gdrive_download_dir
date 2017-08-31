@@ -94,7 +94,8 @@ def download_dir_recursive(dir_id, dir_name):
     """ Download all files and dirs (including empty dirs) from dir with id=dir_id
         and save result in dir_name.
     """
-    log.basicConfig(level=log.INFO)
+    log.basicConfig(level=log.DEBUG)
+    log.getLogger("urllib3").setLevel(log.WARNING)
     log.info('Start downloading ' + dir_id + ' to ' + dir_name)
     log.info('Prepare list of files')
     ses = requests.Session() #create session for activate keep alive
