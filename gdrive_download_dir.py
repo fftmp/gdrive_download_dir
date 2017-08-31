@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+""" Download files and folders from google drive using direct access to files as browser does it.
+    You only need to pass dir_id as param and result will be saved in cwd/dir_id.
+    It's also possible to use this script as module.
+    get_dir_tree function allow to get finenames and other metainfo about files in dir,
+    download_file function just download one file ).
+"""
 
 import sys
 import json
@@ -43,7 +49,7 @@ def get_dir_tree(ses, dir_name, dir_id):
                 tree.extend(nested_tree)
             else:
                 tree.append({'_id' : item['id'], 'name' : dir_name + '/' + item['title'],
-                             'size' : item['fileSize']})
+                             'size' : int(item['fileSize'])})
             tree.append({'_id': dir_id, 'name': dir_name + '/'})
         if 'nextPageToken' in res.keys():
             next_page_token = res['nextPageToken']
@@ -63,7 +69,7 @@ def download_file(item):
     log.debug('Download ' + item['name'] + ' from ' + item['_id'] + ' path = ' + path)
     makedirs(path, exist_ok=True)
 
-    resp = requests.get('https://drive.google.com/uc?', params={'id': item['_id']})
+    resp = requests.get('https://drive.google.com/uc?', params={'id': item['_id']}, stream=True)
     resp.raise_for_status()
     for cookie_name in resp.cookies.keys():
         if cookie_name.startswith('download_warning'):
@@ -82,14 +88,17 @@ def download_file(item):
     real_size = getsize(item['name'])
     if  real_size != item['size']:
         raise Exception('Error during download file ' + item['name'] +
-                        '. Expected size = ' + item['size'] + '. Get size = ' + real_size)
+                        '. Expected size = ' + str(item['size']) + '. Get size = ' + str(real_size))
 
-def main():
-    log.basicConfig(level=log.DEBUG)
-    log.info('Start ' + sys.argv[0])
+def download_dir_recursive(dir_id, dir_name):
+    """ Download all files and dirs (including empty dirs) from dir with id=dir_id
+        and save result in dir_name.
+    """
+    log.basicConfig(level=log.INFO)
+    log.info('Start downloading ' + dir_id + ' to ' + dir_name)
     log.info('Prepare list of files')
     ses = requests.Session() #create session for activate keep alive
-    tree = get_dir_tree(ses, sys.argv[1], sys.argv[1])
+    tree = get_dir_tree(ses, dir_id, dir_name)
     log.info('Start downloading files')
 
     pool = ThreadPool(DOWNLOAD_THREADS)
@@ -97,8 +106,8 @@ def main():
     pool.close()
     pool.join()
 
-    log.info('Done ' + sys.argv[0])
+    log.info('Done downloading ' + dir_id + ' to ' + dir_name)
 
 
 if __name__ == '__main__':
-    main()
+    download_dir_recursive(sys.argv[1], sys.argv[1])
