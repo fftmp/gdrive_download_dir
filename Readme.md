@@ -22,6 +22,5 @@ but it is not works for now. Workable solution is to POST (important) ordinary u
 Currently script creates folder with given folder_id in cwd and place there downloaded content
 
 # TODO
-*   check successfull download
 *   add option for download or skip trashed files
 *   show progress or estimation
