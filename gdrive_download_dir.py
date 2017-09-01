@@ -10,7 +10,7 @@ import sys
 import json
 import logging as log
 from os import makedirs
-from os.path import getsize
+from os.path import getsize, exists
 from multiprocessing.dummy import Pool as ThreadPool
 from time import sleep
 import shutil
@@ -60,7 +60,7 @@ def get_dir_tree(ses, dir_name, dir_id):
             return tree
 
 
-def download_file(item):
+def download_file(item, skip_exist=True):
     """ Download file and save it to name. Create dirs, if necessary.
         If name end with '/', treat it as a dir name an only create dir.
     """
@@ -68,8 +68,14 @@ def download_file(item):
         #this is dir, not a file
         makedirs(item['name'], exist_ok=True)
         return
+
+    if skip_exist and exists(item['name']) and item['size'] == getsize(item['name']):
+        log.debug('Skip downloading already existed file with correct size: ' +
+                  item['name'] + ' id = ' + item['_id'])
+        return
+
     path = item['name'].rsplit('/', maxsplit=1)[0]
-    log.debug('Download ' + item['name'] + ' from ' + item['_id'] + ' path = ' + path)
+    log.debug('Download ' + item['name'] + ' from ' + item['_id'])
     makedirs(path, exist_ok=True)
 
     for i in range(DOWNLOAD_ATTEMPTS):
