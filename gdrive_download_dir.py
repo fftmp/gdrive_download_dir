@@ -98,7 +98,7 @@ def download_file(item, skip_exist=True):
                 resp.raw.decode_content = True
                 shutil.copyfileobj(resp.raw, _f)
             break
-        except (requests.exceptions.ConnectionError, requests.exceptions.BaseHTTPError) as _e:
+        except (requests.exceptions.RequestException, requests.exceptions.BaseHTTPError) as _e:
             if i < DOWNLOAD_ATTEMPTS - 1:
                 log.warning(type(_e).__name__ + ' during download file ' + item['name'] +
                             ' with id = ' + item['_id'] + '. Retrying.')
