@@ -22,11 +22,13 @@ DOWNLOAD_THREADS = 10
 DOWNLOAD_ATTEMPTS = 5
 TIMEOUT = 10
 
-def get_dir_tree(ses, dir_name, dir_id):
+def get_dir_tree(dir_name, dir_id, ses=None):
     """Return info about files and dirs inside list of dict: [{size : '', name: '', _id: ''}]
        for given dir_id. Names are relative to dir. Call itself recursive for subdirs.
     """
     log.debug('get file list %s', dir_name)
+    if not ses:
+        ses = requests.Session() #create session for activate keep alive
     tree = list()
     next_page_token = ''
     url = GDRIVE_HOST + '/drive/v2beta/files?'
@@ -46,7 +48,7 @@ def get_dir_tree(ses, dir_name, dir_id):
         res = json.loads(resp.content.decode('utf8').replace('\'', '"'))
         for item in res['items']:
             if item['mimeType'] == 'application/vnd.google-apps.folder':
-                nested_tree = get_dir_tree(ses, item['title'], item['id'])
+                nested_tree = get_dir_tree(item['title'], item['id'], ses)
                 for _it in nested_tree:
                     _it['name'] = dir_name + '/' + _it['name']
                 tree.extend(nested_tree)
@@ -113,16 +115,12 @@ def download_file(item, skip_exist=True):
         raise Exception('Error during download file ' + item['name'] +
                         '. Expected size = ' + str(item['size']) + '. Get size = ' + str(real_size))
 
-def download_dir_recursive(dir_id, dir_name):
-    """ Download all files and dirs (including empty dirs) from dir with id=dir_id
-        and save result in dir_name.
+def download_dir_recursive(src_dir_id, dst_dir):
+    """ Download all files and dirs (including empty dirs) from dir with id=src_dir_id
+        and save result in dst_dir.
     """
-    log.basicConfig(level=log.DEBUG)
-    log.getLogger("urllib3").setLevel(log.WARNING)
-    log.info('Start downloading %s to %s', dir_id, dir_name)
-    log.info('Prepare list of files')
-    ses = requests.Session() #create session for activate keep alive
-    tree = get_dir_tree(ses, dir_id, dir_name)
+    log.info('Start downloading %s to %s', src_dir_id, dst_dir)
+    tree = get_dir_tree(src_dir_id, dst_dir)
     total_size = 0
     for _it in tree:
         if 'size' in _it.keys():
@@ -134,8 +132,10 @@ def download_dir_recursive(dir_id, dir_name):
     pool.close()
     pool.join()
 
-    log.info('Done downloading %s to %s', dir_id, dir_name)
+    log.info('Done downloading %s to %s', src_dir_id, dst_dir)
 
 
 if __name__ == '__main__':
+    log.basicConfig(level=log.DEBUG)
+    log.getLogger("urllib3").setLevel(log.WARNING)
     download_dir_recursive(sys.argv[1], sys.argv[1])
