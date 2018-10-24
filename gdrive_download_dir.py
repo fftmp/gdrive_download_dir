@@ -26,7 +26,7 @@ def get_dir_tree(ses, dir_name, dir_id):
     """Return info about files and dirs inside list of dict: [{size : '', name: '', _id: ''}]
        for given dir_id. Names are relative to dir. Call itself recursive for subdirs.
     """
-    log.debug('get file list ' + dir_name)
+    log.debug('get file list %s', dir_name)
     tree = list()
     next_page_token = ''
     url = GDRIVE_HOST + '/drive/v2beta/files?'
@@ -100,12 +100,12 @@ def download_file(item, skip_exist=True):
             break
         except (requests.exceptions.RequestException, requests.exceptions.BaseHTTPError) as _e:
             if i < DOWNLOAD_ATTEMPTS - 1:
-                log.warning(type(_e).__name__ + ' during download file ' + item['name'] +
-                            ' with id = ' + item['_id'] + '. Retrying.')
+                log.warning('%s during download file %s with id = %s. Retrying.', type(_e).__name__,
+                            item['name'], item['_id'])
                 sleep(2)
             else:
-                log.error('Couldn\'t download file ' + item['name'] +
-                          ' with id = ' + item['_id'] + '. Skipping.')
+                log.error('Couldn\'t download file %s with id = %s. Skipping.', item['name'],
+                          item['_id'])
                 return
 
     real_size = getsize(item['name'])
@@ -119,7 +119,7 @@ def download_dir_recursive(dir_id, dir_name):
     """
     log.basicConfig(level=log.DEBUG)
     log.getLogger("urllib3").setLevel(log.WARNING)
-    log.info('Start downloading ' + dir_id + ' to ' + dir_name)
+    log.info('Start downloading %s to %s', dir_id, dir_name)
     log.info('Prepare list of files')
     ses = requests.Session() #create session for activate keep alive
     tree = get_dir_tree(ses, dir_id, dir_name)
@@ -127,14 +127,14 @@ def download_dir_recursive(dir_id, dir_name):
     for _it in tree:
         if 'size' in _it.keys():
             total_size += _it['size']
-    log.info('Start downloading files. Total size = ' + str(total_size) + ' bytes')
+    log.info('Start downloading files. Total size = %d bytes', total_size)
 
     pool = ThreadPool(DOWNLOAD_THREADS)
     pool.map(download_file, tree)
     pool.close()
     pool.join()
 
-    log.info('Done downloading ' + dir_id + ' to ' + dir_name)
+    log.info('Done downloading %s to %s', dir_id, dir_name)
 
 
 if __name__ == '__main__':
