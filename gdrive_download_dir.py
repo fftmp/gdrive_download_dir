@@ -12,10 +12,12 @@ import logging as log
 from os import makedirs
 from os.path import exists
 from multiprocessing.dummy import Pool as ThreadPool
+from pathlib import Path
 from time import sleep, time
 import shutil
 import requests
 
+#GDRIVE_MAGIC_KEY = 'AIzaSyBc1bLOZpOtg3-qgMjSQ6pmn6HbE2zjzJg' # alternate
 GDRIVE_MAGIC_KEY = 'AIzaSyC1qbk75NzWBvSaDh6KnsjjA9pIrP4lYIE'
 GDRIVE_HOST = 'https://clients6.google.com'
 DOWNLOAD_THREADS = 10
@@ -29,7 +31,7 @@ def get_dir_tree(dir_name, dir_id, ses=None):
     log.debug('get file list %s', dir_name)
     if not ses:
         ses = requests.Session()
-    tree = list()
+    tree = []
     next_page_token = ''
     url = GDRIVE_HOST + '/drive/v2beta/files?'
     common_params = {'q': '\'' + dir_id + '\' in parents',
@@ -45,7 +47,7 @@ def get_dir_tree(dir_name, dir_id, ses=None):
 
         resp = ses.get(url, params=params, headers=headers)
         resp.raise_for_status()
-        res = json.loads(resp.content.decode('utf8').replace('\'', '"'))
+        res = json.loads(resp.content.decode('utf8'))
         for item in res['items']:
             if item['mimeType'] == 'application/vnd.google-apps.folder':
                 nested_tree = get_dir_tree(item['title'], item['id'], ses)
@@ -67,22 +69,30 @@ def get_dir_tree(dir_name, dir_id, ses=None):
             return tree
 
 
-def download_file(id_, name, overwrite=False):
+def download_file(id_, name):
     """ Download file and save it to name. Create dirs, if necessary.
-        If name end with '/', treat it as a dir name an only create dir.
+        If name ends with '/', treat it as a dir name and only create dir.
     """
     if name.endswith('/'):
         #this is dir, not a file
         makedirs(name, exist_ok=True)
         return
 
-    if exists(name) and not overwrite:
-        log.debug('%s already exists. Skipping.', name)
-        return
-
     path = name.rsplit('/', maxsplit=1)[0]
     log.debug('Download %s from %s', name, id_)
     makedirs(path, exist_ok=True)
+
+    if exists(name):
+        if sys.argv[2] == 'rename':
+            log.debug('%s already exists. Rename to %s.', name, name + id_)
+            name = name + id_
+        elif sys.argv[2] == 'overwrite':
+            log.debug('%s already exists. Overwrite.', name)
+        else:
+            log.debug('%s already exists. Skipping.', name)
+            return
+    else:
+        Path(name).touch() # touch file to reserve name
 
     for i in range(DOWNLOAD_ATTEMPTS):
         try:
@@ -109,6 +119,7 @@ def download_file(id_, name, overwrite=False):
             else:
                 log.error('Couldn\'t download file %s with id = %s. Skipping.', name, id_)
                 return
+
 
 def download_dir_recursive(src_dir_id, dst_dir):
     """ Download all files and dirs (including empty dirs) from dir with id=src_dir_id
